@@ -1,21 +1,20 @@
 mod commands;
 
-use std::{collections::HashSet, fs::File, io::BufReader, usize};
+use std::{fs::File, io::BufReader, usize};
 
 use serenity::async_trait;
 use serenity::framework::standard::{
-    help_commands,
-    macros::{group, help},
-    Args, CommandGroup, CommandResult, HelpOptions,
+    macros::{group},
 };
 use serenity::framework::StandardFramework;
-use serenity::model::prelude::{channel::Message, gateway::Ready, id::UserId};
+use serenity::model::prelude::{gateway::Ready};
 use serenity::prelude::{Client, Context, EventHandler};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 
-use commands::{test::*};
+use commands::{test::*, help::*};
+
 
 #[group]
 #[description("General Command")]
@@ -24,7 +23,6 @@ use commands::{test::*};
 struct General;
 
 struct Handler;
-
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
@@ -32,26 +30,10 @@ impl EventHandler for Handler {
     }
 }
 
-#[help]
-#[individual_command_tip = "Help Command"] // Discription of the help command
-#[strikethrough_commands_tip_in_guild = ""]// Strikethrough commands in guilds
-async fn my_help(
-    ctx: &Context,
-    msg: &Message,
-    args: Args,
-    help_options: &'static HelpOptions,
-    groups: &[&'static CommandGroup],
-    owners: HashSet<UserId>,
-) -> CommandResult {
-    let _ = help_commands::with_embeds(ctx, msg, args, help_options, groups, owners).await;
-    Ok(())
-}
-
 #[derive(Serialize, Deserialize)]
 struct Token {
     token: String,
 }
-
 // func to extract the token
 fn get_token(file_name: &str) -> Result<String> {
     let file = File::open(file_name).unwrap();
@@ -59,6 +41,7 @@ fn get_token(file_name: &str) -> Result<String> {
     let t: Token = serde_json::from_reader(reader).unwrap();
     Ok(t.token)
 }
+
 
 #[tokio::main]
 async fn main() {

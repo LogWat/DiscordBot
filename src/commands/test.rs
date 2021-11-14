@@ -3,10 +3,17 @@ use serenity::model::prelude::*;
 use serenity::prelude::*;
 
 #[command]
-#[description = "Test Command"]
 async fn test(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .say(&ctx.http, format!("{}, Hello!", msg.author.mention()))
+        .await?;
+    Ok(())
+}
+
+#[command]
+async fn fuckog(ctx: &Context, msg: &Message) -> CommandResult {
+    msg.channel_id
+        .say(&ctx.http, format!("F*ck you, {}", msg.author.mention()))
         .await?;
     Ok(())
 }
