@@ -1,25 +1,35 @@
 mod commands;
 
-use std::{fs::File, io::BufReader, usize};
+use std::{fs::File, io::BufReader, usize, sync::Arc};
 
-use serenity::async_trait;
-use serenity::framework::standard::{
-    macros::{group},
+use serenity::{
+    async_trait,
+    client::bridge::gateway::ShardManager,
+    framework::{
+        standard::{
+            macros::group,
+        },
+        StandardFramework,
+    },
+    model::prelude::{gateway::Ready},
+    prelude::{Client, Context, EventHandler},
 };
-use serenity::framework::StandardFramework;
-use serenity::model::prelude::{gateway::Ready};
-use serenity::prelude::{Client, Context, EventHandler};
-
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 
-use commands::{test::*, help::*};
+use commands::{test::*, help::*, owner::*};
 
+
+pub struct ShardManagerContainer;
+
+impl TypeMapKey for ShardManagerContainer {
+    type Value = Arc<Mutex<ShardManager>>;
+}
 
 #[group]
 #[description("General Command")]
 #[summary("General")]
-#[commands(test)]
+#[commands(test, shutdown)]
 struct General;
 
 struct Handler;
