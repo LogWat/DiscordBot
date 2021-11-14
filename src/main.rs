@@ -12,20 +12,23 @@ use serenity::{
         StandardFramework,
     },
     model::prelude::{gateway::Ready},
-    prelude::{Client, Context, EventHandler},
+    prelude::*,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 
 use commands::{test::*, help::*, owner::*};
 
+use tokio::sync::Mutex;
 
 pub struct ShardManagerContainer;
+
 
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
 }
 
+// Create Commands Group (help command is not in this group)
 #[group]
 #[description("General Command")]
 #[summary("General")]

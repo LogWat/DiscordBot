@@ -1,2 +1,5 @@
 # DiscordBot
 DiscordBotをRustでつくる
+
+---
+### メモとか
