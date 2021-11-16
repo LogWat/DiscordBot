@@ -13,6 +13,7 @@ use serenity::{
 };
 
 #[command]
+#[description("Say hello")]
 async fn test(ctx: &Context, msg: &Message) -> CommandResult {
     if msg.author.bot {
         return Ok(());
@@ -35,6 +36,7 @@ async fn fuckog(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
+#[description("Repeat (Converting content to secure text)")]
 async fn say(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if msg.author.bot {
         return Ok(());

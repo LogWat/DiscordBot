@@ -8,6 +8,7 @@ use serenity::prelude::*;
 use crate::ShardManagerContainer;
 
 #[command]
+#[description = "Under Construction"]
 async fn shutdown(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
 
