@@ -1,6 +1,14 @@
-use serenity::framework::standard::{macros::command, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
+use serenity::{
+    framework::standard::{
+        macros::{command}, 
+        CommandResult
+    },
+    model::{
+        channel::Message,
+    },
+};
 
 #[command]
 async fn test(ctx: &Context, msg: &Message) -> CommandResult {
