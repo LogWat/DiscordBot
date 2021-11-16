@@ -7,7 +7,7 @@ use serenity::{
     client::bridge::gateway::ShardManager,
     framework::{
         standard::{
-            macros::group,
+            macros::{group},
         },
         StandardFramework,
     },
@@ -21,8 +21,8 @@ use commands::{test::*, help::*, owner::*};
 
 use tokio::sync::Mutex;
 
+// Data that can be variable shared reference in each command
 pub struct ShardManagerContainer;
-
 
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
@@ -30,9 +30,9 @@ impl TypeMapKey for ShardManagerContainer {
 
 // Create Commands Group (help command is not in this group)
 #[group]
-#[description("General Command")]
+#[description("General commands")]
 #[summary("General")]
-#[commands(test, shutdown)]
+#[commands(test, say, shutdown)]
 struct General;
 
 struct Handler;
@@ -55,16 +55,18 @@ fn get_token(file_name: &str) -> Result<String> {
     Ok(t.token)
 }
 
-
 #[tokio::main]
 async fn main() {
     // Set the token
     let token = get_token("config.json").expect("[?] Token Not Found");
     // Set Commands
     let framework = StandardFramework::new()
-        .configure(|c| c.prefix("/")) // Command Prefix
-        .help(&MY_HELP)               // Add Help Command
-        .group(&GENERAL_GROUP);       // Add General Command Group
+        .configure(|c| c
+            .prefix("/")                       // Command Prefix
+        )
+        //.unrecognised_command(unknown_command) // Add Unrecognised Command
+        .help(&MY_HELP)                        // Add Help Command
+        .group(&GENERAL_GROUP);                // Add General Command Group
     
     // Create Client
     let mut client = Client::builder(&token)
