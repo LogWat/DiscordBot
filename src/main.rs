@@ -33,7 +33,7 @@ impl TypeMapKey for ShardManagerContainer {
 #[group]
 #[description("General commands")]
 #[summary("General")]
-#[commands(test, say, admin, shutdown)]
+#[commands(test, say, shutdown)]
 struct General;
 
 struct Handler;
