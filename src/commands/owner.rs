@@ -34,8 +34,19 @@ async fn shutdown(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-#[required_permissions(ADMINISTRATOR)]
 async fn admin(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    msg.channel_id.say(&ctx.http, "ok").await?;
+    if let Some(member) = &msg.member {
+        for role in &member.roles {
+            if role
+                .to_role_cached(&ctx.cache)
+                .await
+                .map_or(false, |role| role.permissions.contains(Permissions::ADMINISTRATOR))
+            {
+                msg.channel_id.say(ctx, "You are an admin!").await?;
+                return Ok(());
+            }
+        }
+    }
+    msg.channel_id.say(ctx, "You are not an admin!").await?;
     Ok(())
 }
