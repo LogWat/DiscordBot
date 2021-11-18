@@ -34,10 +34,7 @@ async fn shutdown(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-async fn am_i_admin(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    if msg.author.bot {
-        return Ok(());
-    }
+async fn admin(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     if let Some(member) = &msg.member {
         for role in &member.roles {
             if role
@@ -45,11 +42,11 @@ async fn am_i_admin(ctx: &Context, msg: &Message, _args: Args) -> CommandResult 
                 .await
                 .map_or(false, |r| r.has_permission(Permissions::ADMINISTRATOR))
             {
-                msg.channel_id.say(ctx, "Yes!").await?;
+                msg.channel_id.say(&ctx.http, "Yes").await?;
                 return Ok(());
             }
         }
     }
-    msg.channel_id.say(&ctx.http, "No!").await?;
+    msg.channel_id.say(&ctx.http, "No").await?;
     Ok(())
 }
