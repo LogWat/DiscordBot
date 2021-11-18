@@ -8,6 +8,9 @@ use serenity::framework::standard::{
 };
 use serenity::model::prelude::{channel::Message, id::UserId};
 
+// admin関数の利用
+use super::owner::*;
+
 #[help]
 #[individual_command_tip = "Help Info"]
 #[strikethrough_commands_tip_in_guild = ""]
@@ -25,7 +28,8 @@ async fn my_help(
 }
 
 #[hook]
-async fn unknown_command(ctx: &Context, msg: &Message, _: &str) -> CommandResult {
+async fn unknown_command(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let flag = admin(ctx, msg, args).await;
     msg.channel_id
         .say(&ctx.http, "Unknown command. Try `/help`.")
         .await?;

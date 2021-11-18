@@ -33,8 +33,9 @@ async fn shutdown(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
-#[command]
-async fn admin(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+// judge admin
+// 他のファイルから呼び出せるようにpubで宣言
+pub async fn admin(ctx: &Context, msg: &Message, _args: Args) -> bool {
     if let Some(member) = &msg.member {
         for role in &member.roles {
             if role
@@ -42,11 +43,9 @@ async fn admin(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 .await
                 .map_or(false, |role| role.permissions.contains(Permissions::ADMINISTRATOR))
             {
-                msg.channel_id.say(ctx, "You are an admin!").await?;
-                return Ok(());
+                return true;
             }
         }
     }
-    msg.channel_id.say(ctx, "You are not an admin!").await?;
-    Ok(())
+    false
 }
