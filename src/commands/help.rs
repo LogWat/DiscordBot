@@ -28,8 +28,7 @@ async fn my_help(
 }
 
 #[hook]
-async fn unknown_command(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let flag = admin(ctx, msg, args).await;
+async fn unknown_command(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     msg.channel_id
         .say(&ctx.http, "Unknown command. Try `/help`.")
         .await?;
