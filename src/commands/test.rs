@@ -11,6 +11,9 @@ use serenity::{
     },
     utils::{content_safe, ContentSafeOptions},
 };
+use std::fmt::Write;
+
+use crate::CommandCounter;
 
 #[command]
 #[description("Say hello")]
@@ -55,5 +58,22 @@ async fn say(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id
         .say(&ctx.http, content)
         .await?;
+    Ok(())
+}
+
+#[command]
+#[bucket = "complicated"]
+async fn commands(ctx: &Context, msg: &Message) -> CommandResult {
+    if msg.author.bot {
+        return Ok(());
+    }
+    let mut contents = "Commands used:\n".to_string();
+    let data = ctx.data.read().await;
+    let counter = data.get::<CommandCounter>().expect("Expected CommandCounter in TypeMap.");
+
+    for (k, v) in counter {
+        writeln!(contents, "{}: {}", k, v)?;
+    }
+    msg.channel_id.say(&ctx.http, &contents).await?;
     Ok(())
 }
