@@ -1,6 +1,12 @@
 mod commands;
 
-use std::{fs::File, io::BufReader, usize, sync::Arc, collections::{HashSet}};
+use std::{
+    fs::File, 
+    io::BufReader, 
+    usize, 
+    sync::Arc, 
+    collections::{HashSet, HashMap},
+};
 
 use serenity::{
     async_trait,
@@ -10,6 +16,9 @@ use serenity::{
             macros::{group},
         },
         StandardFramework,
+    },
+    model::{
+        channel::Message,
     },
     http::Http,
     model::prelude::{gateway::Ready},
@@ -23,25 +32,37 @@ use commands::{test::*, help::*, owner::*};
 use tokio::sync::Mutex;
 
 // Data that can be variable shared reference in each command
-pub struct ShardManagerContainer;
-
+struct ShardManagerContainer;
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
+}
+
+pub struct CommandCounter;
+impl TypeMapKey for CommandCounter {
+    type Value = HashMap<String, u64>;
 }
 
 // Create Commands Group (help command is not in this group)
 #[group]
 #[description("General commands")]
 #[summary("General")]
-#[commands(test, say, shutdown)]
+#[commands(test, say, shutdown, commands)]
 struct General;
 
 struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, _: Context, ready: Ready) {
+    async fn ready(&self, _cx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
     }
+
+    /*async fn message(&self, ctx: Context, msg: Message) {
+        for mention in msg.mentions.iter() {
+            if mention.id == ctx.cache.read().await.user.id {
+                msg.channel_id.say(&ctx.http, format!("{}, Hello!", mention.mention())).await.unwrap();
+            }
+        }
+    }*/
 }
 
 #[derive(Serialize, Deserialize)]
@@ -95,6 +116,7 @@ async fn main() {
     let mut client = Client::builder(&token)
         .event_handler(Handler)
         .framework(framework)
+        .type_map_insert::<CommandCounter>(HashMap::default())
         .await
         .expect("[?] Failed to create client");
 
