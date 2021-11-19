@@ -35,6 +35,7 @@ async fn shutdown(ctx: &Context, msg: &Message) -> CommandResult {
 
 // judge admin
 // 他のファイルから呼び出せるようにpubで宣言
+#[warn(dead_code)]
 pub async fn admin(ctx: &Context, msg: &Message, _args: Args) -> bool {
     if let Some(member) = &msg.member {
         for role in &member.roles {
