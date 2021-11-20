@@ -18,9 +18,6 @@ use crate::CommandCounter;
 #[command]
 #[description("Say hello")]
 async fn test(ctx: &Context, msg: &Message) -> CommandResult {
-    if msg.author.bot {
-        return Ok(());
-    }
     msg.channel_id
         .say(&ctx.http, format!("{}, Hello!", msg.author.mention()))
         .await?;
@@ -29,9 +26,6 @@ async fn test(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 async fn fuckog(ctx: &Context, msg: &Message) -> CommandResult {
-    if msg.author.bot {
-        return Ok(());
-    }
     msg.channel_id
         .say(&ctx.http, format!("F*ck you, {}", msg.author.mention()))
         .await?;
@@ -41,9 +35,6 @@ async fn fuckog(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[description("Repeat (Converting content to secure text)")]
 async fn say(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    if msg.author.bot {
-        return Ok(());
-    }
     let settings = if let Some(guild_id) = msg.guild_id {
         ContentSafeOptions::default()
             .clean_channel(false)
@@ -64,9 +55,6 @@ async fn say(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 #[bucket = "complicated"]
 async fn commands(ctx: &Context, msg: &Message) -> CommandResult {
-    if msg.author.bot {
-        return Ok(());
-    }
     let mut contents = "Commands used:\n".to_string();
     let data = ctx.data.read().await;
     let counter = data.get::<CommandCounter>().expect("Expected CommandCounter in TypeMap.");

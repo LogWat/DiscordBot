@@ -18,9 +18,6 @@ use crate::ShardManagerContainer;
 #[command]
 #[description = "Under Construction"]
 async fn shutdown(ctx: &Context, msg: &Message) -> CommandResult {
-    if msg.author.bot {
-        return Ok(());
-    }
     let data = ctx.data.read().await;
 
     if let Some(manager) = data.get::<ShardManagerContainer>() {
