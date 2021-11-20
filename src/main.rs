@@ -52,17 +52,19 @@ struct General;
 struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, _cx: Context, ready: Ready) {
+    async fn ready(&self, _ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
     }
 
-    /*async fn message(&self, ctx: Context, msg: Message) {
+    async fn message(&self, ctx: Context, msg: Message) {
+        // get self id
+        let self_id = ctx.http.get_current_user().await.unwrap().id;
         for mention in msg.mentions.iter() {
-            if mention.id == ctx.cache.read().await.user.id {
-                msg.channel_id.say(&ctx.http, format!("{}, Hello!", mention.mention())).await.unwrap();
+            if mention.id == self_id {
+                msg.channel_id.say(&ctx.http, format!("{}, Hello!", msg.author.mention())).await.unwrap();
             }
         }
-    }*/
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -119,6 +121,18 @@ async fn main() {
         .type_map_insert::<CommandCounter>(HashMap::default())
         .await
         .expect("[?] Failed to create client");
+
+    {
+        let mut data = client.data.write().await;
+        data.insert::<ShardManagerContainer>(client.shard_manager.clone());
+    }
+
+    let shard_manager = client.shard_manager.clone();
+
+    /*tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.expect("Could not register ctrl+c handler");
+        shard_manager.lock().await.shutdown_all().await;
+    });*/
 
     // Run Bot
     if let Err(why) = client.start().await {
