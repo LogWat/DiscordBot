@@ -23,7 +23,7 @@ use serenity::{
     prelude::*,
 };
 
-use commands::{test::*, help::*, owner::*};
+use commands::{test::*, help::*, owner::*, ssh::*};
 
 use tokio::sync::Mutex;
 
@@ -42,7 +42,7 @@ impl TypeMapKey for CommandCounter {
 #[group]
 #[description("General commands")]
 #[summary("General")]
-#[commands(test, say, shutdown, commands)]
+#[commands(test, say, shutdown, commands, ssh_test)]
 struct General;
 
 struct Handler;
