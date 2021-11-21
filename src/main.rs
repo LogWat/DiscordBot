@@ -1,9 +1,7 @@
 mod commands;
 
 use std::{
-    fs::File, 
-    io::BufReader, 
-    usize, 
+    env,
     sync::Arc, 
     collections::{HashSet, HashMap},
 };
@@ -24,8 +22,6 @@ use serenity::{
     http::Http,
     prelude::*,
 };
-use serde::{Deserialize, Serialize};
-use serde_json::Result;
 
 use commands::{test::*, help::*, owner::*};
 
@@ -84,22 +80,12 @@ async fn before(ctx: &Context, _msg: &Message, command_name: &str) -> bool {
     true
 }
 
-#[derive(Serialize, Deserialize)]
-struct Token {
-    token: String,
-}
-// func to extract the token
-fn get_token(file_name: &str) -> Result<String> {
-    let file = File::open(file_name).unwrap();
-    let reader = BufReader::new(file);
-    let t: Token = serde_json::from_reader(reader).unwrap();
-    Ok(t.token)
-}
 
 #[tokio::main]
 async fn main() {
+    dotenv::dotenv().expect("Failed to load .env file");
     // Set the token
-    let token = get_token("config.json").expect("[?] Token Not Found");
+    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let http = Http::new_with_token(&token);
     let (owners, bot_id) = match http.get_current_application_info().await {
