@@ -9,7 +9,7 @@ use serenity::framework::standard::{
 use serenity::model::prelude::{channel::Message, id::UserId};
 
 // admin関数の利用
-use super::owner::*;
+// use super::owner::*;
 
 #[help]
 #[individual_command_tip = "Help Info"]
