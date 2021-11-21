@@ -16,6 +16,7 @@ use serenity::model::prelude::*;
 use serenity::prelude::*;
 
 #[command]
+#[description = "SSH into a server"]
 async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     dotenv::dotenv().expect("Failed to load .env file");
 
@@ -23,7 +24,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let hostname = env::var("HOSTNAME").expect("HOSTNAME not set");
     let domainname = env::var("DOMAINNAME").expect("DOMAINNAME not set");
     let password = env::var("PASSWORD").expect("PASSWORD not set");
-    let host = format!("{}1.{}:22", hostname, domainname);
+    let host = format!("{}1{}:22", hostname, domainname);
 
     let tcp = TcpStream::connect(host).unwrap();
     let mut session = Session::new().unwrap();
