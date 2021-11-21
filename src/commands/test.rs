@@ -16,7 +16,6 @@ use std::fmt::Write;
 use crate::CommandCounter;
 
 #[command]
-#[description("Say hello")]
 async fn test(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .say(&ctx.http, format!("{}, Hello!", msg.author.mention()))
