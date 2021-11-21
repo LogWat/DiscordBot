@@ -16,8 +16,12 @@ use serenity::prelude::*;
 use crate::ShardManagerContainer;
 
 #[command]
-#[description = "Under Construction"]
-async fn shutdown(ctx: &Context, msg: &Message) -> CommandResult {
+async fn shutdown(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    if admin(ctx, msg, args).await == false {
+        msg.reply(ctx, "You don't have permission to do that!").await?;
+        return Ok(());
+    }
+
     let data = ctx.data.read().await;
 
     if let Some(manager) = data.get::<ShardManagerContainer>() {

@@ -74,6 +74,16 @@ async fn unknown_command(ctx: &Context, msg: &Message, unknown_command_name: &st
         .await.unwrap();
 }
 
+#[hook]
+async fn before(ctx: &Context, _msg: &Message, command_name: &str) -> bool {
+    let mut data = ctx.data.write().await;
+    let counter = data.get_mut::<CommandCounter>().expect("Expected CommandCounter in TypeMap.");
+    let entry = counter.entry(command_name.to_string()).or_insert(0);
+    *entry += 1;
+
+    true
+}
+
 #[derive(Serialize, Deserialize)]
 struct Token {
     token: String,
@@ -136,10 +146,10 @@ async fn main() {
 
     let shard_manager = client.shard_manager.clone();
 
-    /*tokio::spawn(async move {
+    tokio::spawn(async move {
         tokio::signal::ctrl_c().await.expect("Could not register ctrl+c handler");
         shard_manager.lock().await.shutdown_all().await;
-    });*/
+    });
 
     // Run Bot
     if let Err(why) = client.start().await {
