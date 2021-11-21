@@ -11,7 +11,6 @@ serde_json = "1.0"
 tokio = {version = "1.6.0", features = ["macros", "rt-multi-thread"]}
 
 [dependencies.serenity]
-default-features = false
 features = [
     "builder",
     "cache",

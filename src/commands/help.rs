@@ -3,7 +3,7 @@ use serenity::prelude::*;
 use std::collections::HashSet;
 use serenity::framework::standard::{
     help_commands,
-    macros::{help, hook},
+    macros::{help},
     Args, CommandGroup, HelpOptions,
 };
 use serenity::model::prelude::{channel::Message, id::UserId};
@@ -24,13 +24,5 @@ async fn my_help(
     owners: HashSet<UserId>,
 ) -> CommandResult {
     let _ = help_commands::with_embeds(ctx, msg, args, help_options, groups, owners).await;
-    Ok(())
-}
-
-#[hook]
-async fn unknown_command(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    msg.channel_id
-        .say(&ctx.http, "Unknown command. Try `/help`.")
-        .await?;
     Ok(())
 }

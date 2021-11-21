@@ -13,15 +13,15 @@ use serenity::{
     client::bridge::gateway::ShardManager,
     framework::{
         standard::{
-            macros::{group},
+            macros::{group, hook},
+            StandardFramework,
         },
-        StandardFramework,
     },
     model::{
         channel::Message,
+        gateway::Ready,
     },
     http::Http,
-    model::prelude::{gateway::Ready},
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
@@ -67,6 +67,13 @@ impl EventHandler for Handler {
     }
 }
 
+#[hook]
+async fn unknown_command(ctx: &Context, msg: &Message, unknown_command_name: &str) {
+    msg.channel_id
+        .say(&ctx.http, format!("Unknown command: '{}'. Try `/help`.", unknown_command_name))
+        .await.unwrap();
+}
+
 #[derive(Serialize, Deserialize)]
 struct Token {
     token: String,
@@ -110,7 +117,7 @@ async fn main() {
             .owners(owners)                    // Owners
             .on_mention(Some(bot_id))          // Allow mentioning the bot
         )
-        //.unrecognised_command(unknown_command) // Add Unrecognised Command
+        .unrecognised_command(unknown_command) // Add Unrecognised Command
         .help(&MY_HELP)                        // Add Help Command
         .group(&GENERAL_GROUP);                // Add General Command Group
     
