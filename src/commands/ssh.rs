@@ -15,9 +15,49 @@ use serenity::{
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
+async fn ssh_error(ctx: &Context, msg: &Message) {
+    let error_msg = "Argument Error! Usage: ssh_error <num1>, <num2>,... or <num1>:<num2>";
+    let _ = msg.reply(ctx, error_msg).await;
+}
+
+// TO DO
+// 引数で指定されたホストに対して並行処理でssh接続を行う
+// ホストがDownしてるかどうかは，最初にスクレイピングして状態を保持しておく．
 #[command]
 #[description = "SSH into a server"]
 async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+
+    let mut args_m = args;
+    let mut hosts = Vec::new();
+    for arg in args_m.iter::<String>() {
+        match arg {
+            Ok(arg) => {
+                match arg.parse::<u32>() {
+                    Ok(host) => {
+                        hosts.push(host);
+                    },
+                    Err(_) => {
+                        let slice_arg = arg.as_str();
+                        if slice_arg.contains(":") {
+                            let mut nums = slice_arg.split(":").collect::<Vec<&str>>();
+                            if nums.len() > 2 {
+                                ssh_error(ctx: &Context, msg: &Message).await;
+                                return Ok(());
+                            }
+                        } else {
+                            ssh_error(ctx: &Context, msg: &Message).await;
+                            return Ok(());
+                        }
+                    }
+                }
+            },
+            Err(_e) => {
+                ssh_error(ctx: &Context, msg: &Message).await;
+               return Ok(());
+            }
+        };
+    }
+
     dotenv::dotenv().expect("Failed to load .env file");
 
     let username = env::var("USERNAME").expect("USERNAME not set");
@@ -47,7 +87,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut s = String::new();
     channel.read_to_string(&mut s).unwrap();
     
-    msg.channel_id.say(&ctx.http, &s).await?;
+    msg.channel_id.say(&ctx.http, "Argument test! This is a dummy message lol").await?;
 
     channel.wait_close().unwrap();
 
