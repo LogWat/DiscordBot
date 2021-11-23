@@ -39,23 +39,38 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     Err(_) => {
                         let slice_arg = arg.as_str();
                         if slice_arg.contains(":") {
-                            let mut nums = slice_arg.split(":").collect::<Vec<&str>>();
+                            let nums = slice_arg.split(":").collect::<Vec<&str>>();
                             if nums.len() > 2 {
-                                ssh_error(ctx: &Context, msg: &Message).await;
+                                ssh_error(ctx, msg).await;
                                 return Ok(());
+                            } else {
+                                let num1 = nums[0].parse::<u32>();
+                                let num2 = nums[1].parse::<u32>();
+                                if num1.is_ok() && num2.is_ok() {
+                                    for i in num1.unwrap()..num2.unwrap() {
+                                        hosts.push(i);
+                                    }
+                                } else {
+                                    ssh_error(ctx, msg).await;
+                                    return Ok(());
+                                }
                             }
                         } else {
-                            ssh_error(ctx: &Context, msg: &Message).await;
+                            ssh_error(ctx, msg).await;
                             return Ok(());
                         }
                     }
                 }
             },
             Err(_e) => {
-                ssh_error(ctx: &Context, msg: &Message).await;
+                ssh_error(ctx, msg).await;
                return Ok(());
             }
         };
+    }
+
+    for i in hosts {
+        println!("{}", i);
     }
 
     dotenv::dotenv().expect("Failed to load .env file");
