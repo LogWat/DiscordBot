@@ -47,7 +47,12 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                                 let num1 = nums[0].parse::<u32>();
                                 let num2 = nums[1].parse::<u32>();
                                 if num1.is_ok() && num2.is_ok() {
-                                    for i in num1.unwrap()..num2.unwrap() {
+                                    let mut a = num1.unwrap();
+                                    let mut b = num2.unwrap();
+                                    if a > b {
+                                        std::mem::swap(&mut a, &mut b);
+                                    }
+                                    for i in a..b {
                                         hosts.push(i);
                                     }
                                 } else {
