@@ -52,7 +52,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                                     if a > b {
                                         std::mem::swap(&mut a, &mut b);
                                     }
-                                    for i in a..b {
+                                    for i in a..(b+1) {
                                         hosts.push(i);
                                     }
                                 } else {
