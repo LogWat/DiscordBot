@@ -38,6 +38,17 @@ impl TypeMapKey for CommandCounter {
     type Value = HashMap<String, u64>;
 }
 
+// Data imported from .env
+pub struct EnvData {
+    pub host: String,
+    pub domain: String,
+    pub key_path: String,
+    pub key_pass: String,
+}
+impl TypeMapKey for EnvData {
+    type Value = EnvData;
+}
+
 // Create Commands Group (help command is not in this group)
 #[group]
 #[description("General commands")]
@@ -128,6 +139,12 @@ async fn main() {
     {
         let mut data = client.data.write().await;
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
+        data.insert::<EnvData>(EnvData {
+            host: env::var("SSH_HOST").expect("Expected SSH_HOST in the environment"),
+            domain: env::var("SSH_DOMAIN").expect("Expected SSH_DOMAIN in the environment"),
+            key_path: env::var("SSH_KEY_PATH").expect("Expected SSH_KEY_PATH in the environment"),
+            key_pass: env::var("SSH_KEY_PASS").expect("Expected SSH_KEY_PASS in the environment"),
+        });
     }
 
     let shard_manager = client.shard_manager.clone();
