@@ -21,8 +21,9 @@ async fn ssh_error(ctx: &Context, msg: &Message) {
 }
 
 // TO DO
-// 引数で指定されたホストに対して並行処理でssh接続を行う
-// ホストがDownしてるかどうかは，最初にスクレイピングして状態を保持しておく．
+// スクレイピングによるssh接続先OSの識別
+// ↑で取得した情報から，引数で指定されたホスト内から不必要なものを弾く
+// hostnameやpasswordは通常BOT起動中は不変なので，一度BOT起動時に読み込ませておく
 #[command]
 #[description = "SSH into a server"]
 async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
