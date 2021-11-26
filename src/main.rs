@@ -27,7 +27,7 @@ use commands::{test::*, help::*, owner::*, ssh::*};
 
 use tokio::sync::Mutex;
 
-// Data that can be variable shared reference in each command
+// This data is shared and edited, so Mutex?
 struct ShardManagerContainer;
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
@@ -38,7 +38,7 @@ impl TypeMapKey for CommandCounter {
     type Value = HashMap<String, u64>;
 }
 
-// Data imported from .env
+// Data imported from .env ...This data will only be read, so shouldn't it be Mutex?
 pub struct EnvData {
     pub host: String,
     pub domain: String,
@@ -140,10 +140,10 @@ async fn main() {
         let mut data = client.data.write().await;
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
         data.insert::<EnvData>(EnvData {
-            host: env::var("SSH_HOST").expect("Expected SSH_HOST in the environment"),
-            domain: env::var("SSH_DOMAIN").expect("Expected SSH_DOMAIN in the environment"),
-            key_path: env::var("SSH_KEY_PATH").expect("Expected SSH_KEY_PATH in the environment"),
-            key_pass: env::var("SSH_KEY_PASS").expect("Expected SSH_KEY_PASS in the environment"),
+            host: env::var("HOSTNASME").expect("Expected HOST in the environment"),
+            domain: env::var("DOMAINNAME").expect("Expected DOMAIN in the environment"),
+            key_path: env::var("KEY_PATH").expect("Expected KEY_PATH in the environment"),
+            key_pass: env::var("PASSWORD").expect("Expected PASSWORD in the environment"),
         });
     }
 
