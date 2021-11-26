@@ -1,5 +1,4 @@
 use std::io::prelude::*;
-use std::env;
 use std::path::Path;
 use std::net::{TcpStream};
 use ssh2::Session;
@@ -15,6 +14,8 @@ use serenity::{
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
+use crate::EnvData;
+
 async fn ssh_error(ctx: &Context, msg: &Message) {
     let error_msg = "Argument Error! Usage: ssh_error <num1>, <num2>,... or <num1>:<num2>";
     let _ = msg.reply(ctx, error_msg).await;
@@ -27,6 +28,14 @@ async fn ssh_error(ctx: &Context, msg: &Message) {
 #[command]
 #[description = "SSH into a server"]
 async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    
+    let data = ctx.data.read().await;
+    let envdata = data.get::<EnvData>().unwrap();
+    let user = envdata.user.clone();
+    let host = envdata.host.clone();
+    let domain = envdata.domain.clone();
+    let key_pass = envdata.key_pass.clone();
+    let key_path = envdata.key_path.clone();
 
     let mut args_m = args;
     let mut hosts = Vec::new();
@@ -75,30 +84,19 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         };
     }
 
-    for i in hosts {
-        println!("{}", i);
-    }
+    let target = format!("{}1{}:22", host, domain);
 
-    dotenv::dotenv().expect("Failed to load .env file");
-
-    let username = env::var("USERNAME").expect("USERNAME not set");
-    let hostname = env::var("HOSTNAME").expect("HOSTNAME not set");
-    let domainname = env::var("DOMAINNAME").expect("DOMAINNAME not set");
-    let password = env::var("PASSWORD").expect("PASSWORD not set");
-    let host = format!("{}1{}:22", hostname, domainname);
-
-    let tcp = TcpStream::connect(host).unwrap();
+    let tcp = TcpStream::connect(target).unwrap();
     let mut session = Session::new().unwrap();
     session.set_tcp_stream(tcp);
     session.handshake().unwrap();
 
-    let tmp = env::var("KEY_PATH").expect("KEY_PATH not set");
-    let key_path = Path::new(&tmp);
+    let key_path = Path::new(&key_path);
     session.userauth_pubkey_file(
-        &username,
+        &user,
         None,
         key_path,
-        Some(&password),
+        Some(&key_pass),
     ).unwrap();
 
     assert!(session.authenticated());
