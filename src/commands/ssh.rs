@@ -22,7 +22,7 @@ async fn ssh_error(ctx: &Context, msg: &Message) {
 }
 
 // TO DO
-// スクレイピングによるssh接続先OSの識別
+// スクレイピングによるssh接続先OSの識別（接続要求タイミングを考える！！！）
 // ↑で取得した情報から，引数で指定されたホスト内から不必要なものを弾く
 // hostnameやpasswordは通常BOT起動中は不変なので，一度BOT起動時に読み込ませておく
 #[command]
@@ -36,6 +36,8 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let domain = envdata.domain.clone();
     let key_pass = envdata.key_pass.clone();
     let key_path = envdata.key_path.clone();
+
+    let host_status = envdata.host_status.clone();
 
     let mut args_m = args;
     let mut hosts = Vec::new();
