@@ -45,6 +45,8 @@ pub struct EnvData {
     pub domain: String,
     pub key_path: String,
     pub key_pass: String,
+
+    pub host_status: String,
 }
 impl TypeMapKey for EnvData {
     type Value = EnvData;
@@ -146,6 +148,7 @@ async fn main() {
             domain: env::var("DOMAINNAME").expect("Expected DOMAIN in the environment"),
             key_path: env::var("KEY_PATH").expect("Expected KEY_PATH in the environment"),
             key_pass: env::var("PASSWORD").expect("Expected PASSWORD in the environment"),
+            host_status: env::var("HOST_STATUS").expect("Expected HOST_STATUS in the environment"),
         });
     }
 
