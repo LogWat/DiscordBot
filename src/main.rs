@@ -144,7 +144,7 @@ async fn main() {
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
         data.insert::<EnvData>(EnvData {
             user: env::var("USERNAME").expect("Expected a USER in the environment"),
-            host: env::var("HOSTNASME").expect("Expected HOST in the environment"),
+            host: env::var("HOSTNAME").expect("Expected HOST in the environment"),
             domain: env::var("DOMAINNAME").expect("Expected DOMAIN in the environment"),
             key_path: env::var("KEY_PATH").expect("Expected KEY_PATH in the environment"),
             key_pass: env::var("PASSWORD").expect("Expected PASSWORD in the environment"),
