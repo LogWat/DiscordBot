@@ -37,7 +37,15 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let key_pass = envdata.key_pass.clone();
     let key_path = envdata.key_path.clone();
 
+    // get status info by scraping
     let host_status = envdata.host_status.clone();
+    let body = reqwest::blocking::get(&host_status)?.text()?;
+    let document = scraper::Html::parse_document(&body);
+    let selecter = scraper::Selector::parse("h2:contains('3C113') ~ ul").unwrap();
+    
+    for node in document.select(&selecter) {
+        let text = node.text();
+    }
 
     let mut args_m = args;
     let mut hosts = Vec::new();
