@@ -14,8 +14,6 @@ use serenity::{
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-use tokio::sync::Mutex;
-
 use crate::EnvData;
 
 async fn ssh_error(ctx: &Context, msg: &Message) {
