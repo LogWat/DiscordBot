@@ -14,10 +14,12 @@ use serenity::{
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
+use tokio::sync::Mutex;
+
 use crate::EnvData;
 
 async fn ssh_error(ctx: &Context, msg: &Message) {
-    let error_msg = "Argument Error! Usage: ssh_error <num1>, <num2>,... or <num1>:<num2>";
+    let error_msg = "Argument Error! Usage: ssh <num1>, <num2>,... or <num1>:<num2>";
     let _ = msg.reply(ctx, error_msg).await;
 }
 
@@ -38,15 +40,22 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let key_path = envdata.key_path.clone();
 
     // get status info by scraping
-    {
-        let host_status = envdata.host_status.clone();
-        let body = reqwest::blocking::get(&host_status)?.text()?;
-        let document = scraper::Html::parse_document(&body);
-        let selecter = scraper::Selector::parse("h2:contains('3C113') ~ ul").unwrap();
-        for node in document.select(&selecter) {
-            println!("{:?}", node.text());
-        }
-    }
+    let host_status = envdata.host_status.clone();
+    match reqwest::get(&host_status).await {
+        Ok(response) => {
+            let doc = scraper::Html::parse_document(&response.text().await.unwrap());
+            let selecter = scraper::Selector::parse("h2:contains('3C113') ~ ul").unwrap();
+            let mut status_list = doc.select(&selecter).next().unwrap().text().collect::<Vec<_>>();
+            for i in 0..status_list.len() {
+                status_list[i] = status_list[i].trim();
+                println!("{}", status_list[i]);
+            }
+        },
+        Err(_e) => {
+            let _ = msg.react(ctx, '\u{1F6AB}').await;
+            return Ok(());
+        },
+    };
 
     let mut args_m = args;
     let mut hosts = Vec::new();
