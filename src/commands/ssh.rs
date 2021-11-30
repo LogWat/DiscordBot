@@ -122,7 +122,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut s = String::new();
     channel.read_to_string(&mut s).unwrap();
     
-    msg.channel_id.say(&ctx.http, "Argument test! This is a dummy message lol").await?;
+    msg.channel_id.say(&ctx.http, format!("Argument test! {:?}", hosts)).await?;
 
     channel.wait_close().unwrap();
 
