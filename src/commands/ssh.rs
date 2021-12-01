@@ -17,6 +17,7 @@ use serenity::prelude::*;
 use crate::EnvData;
 
 struct HostStatus {
+    number: usize,
     kind: String,
     status: bool,
 }
@@ -52,22 +53,25 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             let div_element = doc.select(&div_selecter).next().unwrap();
             let li_selector = scraper::Selector::parse("li").unwrap();
             let use_selector = scraper::Selector::parse("use").unwrap();
-            for li_element in div_element.select(&li_selector) {
+            for (i, li_element) in div_element.select(&li_selector).enumerate() {
                 let status = format!("{:?}", li_element.value().attr("class").unwrap());
                 if status.contains("success") {
                     let use_element = li_element.select(&use_selector).next().unwrap();
                     host_statuses.push(HostStatus {
+                        number: i+1,
                         kind: format!("{:?}", use_element.value().attr("href").unwrap()),
                         status: true,
                     });
                 } else {
                     host_statuses.push(HostStatus {
+                        number: i+1,
                         kind: format!("{}", "NULL"),
                         status: false,
                     });
                 }
             }
             for host_status in host_statuses {
+                println!("{}", host_status.number);
                 println!("{}", host_status.kind);
                 println!("{}", host_status.status);
             }
