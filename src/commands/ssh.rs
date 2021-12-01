@@ -85,7 +85,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                         if host_status.status {
                             if !host_status.kind.contains("windows") {
                                 let target = format!("{}{}{}", host, host_num, domain);
-                                text.push_str(&format!("{}\n", ssh_connect(target, user, key_pass, key_path).await));
+                                text.push_str(&format!("{}: {}\n", host_num, ssh_connect(&target, &user, &key_pass, &key_path).await));
                             } else {
                                 text.push_str(&format!("{} is not connectable\n", host_num));
                             }
@@ -114,7 +114,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                                         if host_status.status {
                                             if !host_status.kind.contains("windows") {
                                                 let target = format!("{}{}{}", host, i, domain);
-                                                text.push_str(&format!("{}\n", ssh_connect(target, user, key_pass, key_path).await));
+                                                text.push_str(&format!("{}: {}\n", i, ssh_connect(&target, &user, &key_pass, &key_path).await));
                                             } else {
                                                 text.push_str(&format!("{} is not connectable\n", i));
                                             }
@@ -146,7 +146,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
 }
 
-async fn ssh_connect(target: String, user: String, key_pass: String, key_path: String) -> String {
+async fn ssh_connect(target: &String, user: &String, key_pass: &String, key_path: &String) -> String {
     let tcp = TcpStream::connect(target).unwrap();
     let mut session = Session::new().unwrap();
     session.set_tcp_stream(tcp);
