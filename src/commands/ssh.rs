@@ -76,7 +76,6 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let mut text: String = String::new(); // for reply
     let mut args_m = args;
-    let mut hosts = Vec::new();
     for arg in args_m.iter::<String>() {
         match arg {
             Ok(arg) => {
