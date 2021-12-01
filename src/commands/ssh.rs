@@ -52,7 +52,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             let div_element = doc.select(&div_selecter).next().unwrap();
             let li_selector = scraper::Selector::parse("li").unwrap();
             let use_selector = scraper::Selector::parse("use").unwrap();
-            for (i, li_element) in div_element.select(&li_selector).enumerate() {
+            for li_element in div_element.select(&li_selector) {
                 let status = format!("{:?}", li_element.value().attr("class").unwrap());
                 if status.contains("success") {
                     let use_element = li_element.select(&use_selector).next().unwrap();
@@ -81,7 +81,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             Ok(arg) => {
                 match arg.parse::<u32>() {
                     Ok(host_num) => {
-                        let host_status: HostStatus = host_statuses[(host_num-1) as usize];
+                        let host_status = &host_statuses[(host_num as usize) - 1];
                         if host_status.status {
                             if !host_status.kind.contains("windows") {
                                 let target = format!("{}{}{}", host, host_num, domain);
@@ -110,7 +110,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                                         std::mem::swap(&mut a, &mut b);
                                     }
                                     for i in a..(b+1) {
-                                        let host_status: HostStatus = host_statuses[(i-1) as usize];
+                                        let host_status = &host_statuses[(i as usize) - 1];
                                         if host_status.status {
                                             if !host_status.kind.contains("windows") {
                                                 let target = format!("{}{}{}", host, i, domain);
