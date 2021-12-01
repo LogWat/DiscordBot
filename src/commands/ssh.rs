@@ -16,6 +16,11 @@ use serenity::prelude::*;
 
 use crate::EnvData;
 
+struct HostStatus {
+    kind: String,
+    status: bool,
+}
+
 async fn ssh_error(ctx: &Context, msg: &Message) {
     let error_msg = "Argument Error! Usage: ssh <num1>, <num2>,... or <num1>:<num2>";
     let _ = msg.reply(ctx, error_msg).await;
@@ -38,14 +43,32 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let key_path = envdata.key_path.clone();
 
     // get status info by scraping
-    let host_status = envdata.host_status.clone();
-    match reqwest::get(&host_status).await {
+    let host_status_url = envdata.host_status.clone();
+    let mut host_statuses: Vec::<HostStatus> = Vec::new();
+    match reqwest::get(&host_status_url).await {
         Ok(response) => {
             let doc = scraper::Html::parse_document(&response.text().await.unwrap());
-            let selecter = scraper::Selector::parse("div.col-sm h2 ul li[class]").unwrap();
-            for element in doc.select(&selecter) {
-                println!("{:?}", element.inner_html());
-                println!("{}", element.value().attr("class").unwrap());
+            let div_selecter = scraper::Selector::parse("div.col-sm").unwrap();
+            let div_element = doc.select(&div_selecter).next().unwrap();
+            let li_selector = scraper::Selector::parse("li").unwrap();
+            let use_selector = scraper::Selector::parse("use").unwrap();
+            for li_element in div_element.select(&li_selector) {
+                let status = format!("{:?}", li_element.value().attr("class").unwrap());
+                if status.contains("success") {
+                    host_statuses.push(HostStatus {
+                        kind: format!("{:?}", li_element.select(&use_selector).next().unwrap()),
+                        status: true,
+                    });
+                } else {
+                    host_statuses.push(HostStatus {
+                        kind: format!("{}", "NULL"),
+                        status: false,
+                    });
+                }
+            }
+            for host_status in host_statuses {
+                println!("{}", host_status.kind);
+                println!("{}", host_status.status);
             }
         },
         Err(_e) => {
