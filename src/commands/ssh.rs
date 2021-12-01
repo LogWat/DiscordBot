@@ -17,7 +17,6 @@ use serenity::prelude::*;
 use crate::EnvData;
 
 struct HostStatus {
-    number: usize,
     kind: String,
     status: bool,
 }
@@ -58,22 +57,15 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 if status.contains("success") {
                     let use_element = li_element.select(&use_selector).next().unwrap();
                     host_statuses.push(HostStatus {
-                        number: i+1,
                         kind: format!("{:?}", use_element.value().attr("href").unwrap()),
                         status: true,
                     });
                 } else {
                     host_statuses.push(HostStatus {
-                        number: i+1,
                         kind: format!("{}", "NULL"),
                         status: false,
                     });
                 }
-            }
-            for host_status in host_statuses {
-                println!("{}", host_status.number);
-                println!("{}", host_status.kind);
-                println!("{}", host_status.status);
             }
         },
         Err(_e) => {
@@ -82,14 +74,25 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         },
     };
 
+    let mut text: String = String::new(); // for reply
     let mut args_m = args;
     let mut hosts = Vec::new();
     for arg in args_m.iter::<String>() {
         match arg {
             Ok(arg) => {
                 match arg.parse::<u32>() {
-                    Ok(host) => {
-                        hosts.push(host);
+                    Ok(host_num) => {
+                        let host_status: HostStatus = host_statuses[(host_num-1) as usize];
+                        if host_status.status {
+                            if !host_status.kind.contains("windows") {
+                                let target = format!("{}{}{}", host, host_num, domain);
+                                text.push_str(&format!("{}\n", ssh_connect(target, user, key_pass, key_path).await));
+                            } else {
+                                text.push_str(&format!("{} is not connectable\n", host_num));
+                            }
+                        } else {
+                            text.push_str(&format!("{} is not available\n", host_num));
+                        }
                     },
                     Err(_) => {
                         let slice_arg = arg.as_str();
@@ -108,7 +111,17 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                                         std::mem::swap(&mut a, &mut b);
                                     }
                                     for i in a..(b+1) {
-                                        hosts.push(i);
+                                        let host_status: HostStatus = host_statuses[(i-1) as usize];
+                                        if host_status.status {
+                                            if !host_status.kind.contains("windows") {
+                                                let target = format!("{}{}{}", host, i, domain);
+                                                text.push_str(&format!("{}\n", ssh_connect(target, user, key_pass, key_path).await));
+                                            } else {
+                                                text.push_str(&format!("{} is not connectable\n", i));
+                                            }
+                                        } else {
+                                            text.push_str(&format!("{} is not available\n", i));
+                                        }
                                     }
                                 } else {
                                     ssh_error(ctx, msg).await;
@@ -129,8 +142,12 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         };
     }
 
-    let target = format!("{}1{}:22", host, domain);
+    msg.channel_id.say(&ctx.http, format!("{:?}", text)).await?;
 
+    Ok(())
+}
+
+async fn ssh_connect(target: String, user: String, key_pass: String, key_path: String) -> String {
     let tcp = TcpStream::connect(target).unwrap();
     let mut session = Session::new().unwrap();
     session.set_tcp_stream(tcp);
@@ -151,9 +168,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut s = String::new();
     channel.read_to_string(&mut s).unwrap();
     
-    msg.channel_id.say(&ctx.http, format!("Argument test! {:?}", hosts)).await?;
-
     channel.wait_close().unwrap();
 
-    Ok(())
+    s
 }
