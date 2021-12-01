@@ -42,8 +42,9 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     match reqwest::get(&host_status).await {
         Ok(response) => {
             let doc = scraper::Html::parse_document(&response.text().await.unwrap());
-            let selecter = scraper::Selector::parse("div.col-sm ul li[class]").unwrap();
+            let selecter = scraper::Selector::parse("div.col-sm h2 ul li[class]").unwrap();
             for element in doc.select(&selecter) {
+                println!("{:?}", element.inner_html());
                 println!("{}", element.value().attr("class").unwrap());
             }
         },
