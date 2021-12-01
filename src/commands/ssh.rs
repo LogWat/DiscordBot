@@ -55,8 +55,9 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             for li_element in div_element.select(&li_selector) {
                 let status = format!("{:?}", li_element.value().attr("class").unwrap());
                 if status.contains("success") {
+                    let use_element = li_element.select(&use_selector).next().unwrap();
                     host_statuses.push(HostStatus {
-                        kind: format!("{:?}", li_element.select(&use_selector).next().unwrap()),
+                        kind: format!("{:?}", use_element.value().attr("href").unwrap()),
                         status: true,
                     });
                 } else {
