@@ -1,4 +1,5 @@
 use std::io::prelude::*;
+use std::env;
 use std::path::Path;
 use std::net::{TcpStream};
 use ssh2::Session;
@@ -13,8 +14,6 @@ use serenity::{
 };
 use serenity::model::prelude::*;
 use serenity::prelude::*;
-
-use crate::EnvData;
 
 struct HostStatus {
     kind: String,
@@ -34,16 +33,12 @@ async fn ssh_error(ctx: &Context, msg: &Message) {
 #[description = "SSH into a server"]
 async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     
-    let data = ctx.data.read().await;
-    let envdata = data.get::<EnvData>().unwrap();
-    let user = envdata.user.clone();
-    let host = envdata.host.clone();
-    let domain = envdata.domain.clone();
-    let key_pass = envdata.key_pass.clone();
-    let key_path = envdata.key_path.clone();
+    dotenv::dotenv().expect("Failed to load .env file");
+    let host = env::var("HOSTNAME").expect("HOSTNAME is not set");
+    let domain = env::var("DOMAINNAME").expect("DOMAINNAME is not set");
 
     // get status info by scraping
-    let host_status_url = envdata.host_status.clone();
+    let host_status_url = env::var("HOST_STATUS").expect("HOST_STATUS is not set");
     let mut host_statuses: Vec::<HostStatus> = Vec::new();
     match reqwest::get(&host_status_url).await {
         Ok(response) => {
@@ -85,7 +80,11 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                         if host_status.status {
                             if !host_status.kind.contains("windows") {
                                 let target = format!("{}{}{}:22", host, host_num, domain);
-                                text.push_str(&format!("{}: {}\n", host_num, ssh_connect(&target, &user, &key_pass, &key_path).await));
+                                let handle = tokio::spawn(async move {
+                                    ssh_connect(&target).await;
+                                });
+                                let result = handle.await.unwrap();
+                                text.push_str(&format!("{}{}: {:?}\n", host, host_num, result));
                             } else {
                                 text.push_str(&format!("{}{} is not connectable\n", host, host_num));
                             }
@@ -114,7 +113,11 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                                         if host_status.status {
                                             if !host_status.kind.contains("windows") {
                                                 let target = format!("{}{}{}:22", host, i, domain);
-                                                text.push_str(&format!("{}: {}\n", i, ssh_connect(&target, &user, &key_pass, &key_path).await));
+                                                let handle = tokio::spawn(async move {
+                                                    ssh_connect(&target).await;
+                                                });
+                                                let result = handle.await.unwrap();
+                                                text.push_str(&format!("{}{}: {:?}\n", host, i, result));
                                             } else {
                                                 text.push_str(&format!("{}{} is not connectable\n", host, i));
                                             }
@@ -141,12 +144,17 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         };
     }
 
-    msg.channel_id.say(&ctx.http, format!("{:?}", text)).await?;
+    msg.channel_id.say(&ctx.http, format!("{}", text)).await?;
 
     Ok(())
 }
 
-async fn ssh_connect(target: &String, user: &String, key_pass: &String, key_path: &String) -> String {
+async fn ssh_connect(target: &String) -> String {
+    dotenv::dotenv().expect("Failed to load .env file");
+    let user = env::var("USERNAME").expect("USERNAME is not set");
+    let key_pass = env::var("PASSWORD").expect("PASSWORD is not set");
+    let key_path = env::var("KEY_PATH").expect("KEY_PATH is not set");
+
     let mut session = Session::new().unwrap();
     match TcpStream::connect(target) {
         Ok(tcp) => {

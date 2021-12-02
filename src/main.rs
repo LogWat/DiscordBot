@@ -38,20 +38,6 @@ impl TypeMapKey for CommandCounter {
     type Value = HashMap<String, u64>;
 }
 
-// Data imported from .env ...This data will only be read, so shouldn't it be Mutex?
-pub struct EnvData {
-    pub user: String,
-    pub host: String,
-    pub domain: String,
-    pub key_path: String,
-    pub key_pass: String,
-
-    pub host_status: String,
-}
-impl TypeMapKey for EnvData {
-    type Value = EnvData;
-}
-
 // Create Commands Group (help command is not in this group)
 #[group]
 #[description("General commands")]
@@ -142,14 +128,6 @@ async fn main() {
     {
         let mut data = client.data.write().await;
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
-        data.insert::<EnvData>(EnvData {
-            user: env::var("USERNAME").expect("Expected a USER in the environment"),
-            host: env::var("HOSTNAME").expect("Expected HOST in the environment"),
-            domain: env::var("DOMAINNAME").expect("Expected DOMAIN in the environment"),
-            key_path: env::var("KEY_PATH").expect("Expected KEY_PATH in the environment"),
-            key_pass: env::var("PASSWORD").expect("Expected PASSWORD in the environment"),
-            host_status: env::var("HOST_STATUS").expect("Expected HOST_STATUS in the environment"),
-        });
     }
 
     let shard_manager = client.shard_manager.clone();
