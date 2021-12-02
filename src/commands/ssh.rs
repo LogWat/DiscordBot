@@ -87,10 +87,10 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                                 let target = format!("{}{}{}:22", host, host_num, domain);
                                 text.push_str(&format!("{}: {}\n", host_num, ssh_connect(&target, &user, &key_pass, &key_path).await));
                             } else {
-                                text.push_str(&format!("{} is not connectable\n", host_num));
+                                text.push_str(&format!("{}{} is not connectable\n", host, host_num));
                             }
                         } else {
-                            text.push_str(&format!("{} is not available\n", host_num));
+                            text.push_str(&format!("{}{} is not available\n", host, host_num));
                         }
                     },
                     Err(_) => {
@@ -116,10 +116,10 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                                                 let target = format!("{}{}{}:22", host, i, domain);
                                                 text.push_str(&format!("{}: {}\n", i, ssh_connect(&target, &user, &key_pass, &key_path).await));
                                             } else {
-                                                text.push_str(&format!("{} is not connectable\n", i));
+                                                text.push_str(&format!("{}{} is not connectable\n", host, i));
                                             }
                                         } else {
-                                            text.push_str(&format!("{} is not available\n", i));
+                                            text.push_str(&format!("{}{} is not available\n", host, i));
                                         }
                                     }
                                 } else {
