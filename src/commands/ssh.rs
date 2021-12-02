@@ -84,7 +84,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                         let host_status = &host_statuses[(host_num as usize) - 1];
                         if host_status.status {
                             if !host_status.kind.contains("windows") {
-                                let target = format!("{}{}{}", host, host_num, domain);
+                                let target = format!("{}{}{}:22", host, host_num, domain);
                                 text.push_str(&format!("{}: {}\n", host_num, ssh_connect(&target, &user, &key_pass, &key_path).await));
                             } else {
                                 text.push_str(&format!("{} is not connectable\n", host_num));
@@ -113,7 +113,7 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                                         let host_status = &host_statuses[(i as usize) - 1];
                                         if host_status.status {
                                             if !host_status.kind.contains("windows") {
-                                                let target = format!("{}{}{}", host, i, domain);
+                                                let target = format!("{}{}{}:22", host, i, domain);
                                                 text.push_str(&format!("{}: {}\n", i, ssh_connect(&target, &user, &key_pass, &key_path).await));
                                             } else {
                                                 text.push_str(&format!("{} is not connectable\n", i));
@@ -147,9 +147,17 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 }
 
 async fn ssh_connect(target: &String, user: &String, key_pass: &String, key_path: &String) -> String {
-    let tcp = TcpStream::connect(target).unwrap();
     let mut session = Session::new().unwrap();
-    session.set_tcp_stream(tcp);
+    match TcpStream::connect(target) {
+        Ok(tcp) => {
+            session.set_tcp_stream(tcp);
+        },
+        Err(e) => {
+            println!("{}", e);
+            println!("{}", target);
+            return String::from("connect error");
+        },
+    }
     session.handshake().unwrap();
 
     let key_path = Path::new(&key_path);
