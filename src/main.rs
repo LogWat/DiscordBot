@@ -1,5 +1,3 @@
-mod commands;
-
 use std::{
     env,
     sync::Arc, 
@@ -18,16 +16,29 @@ use serenity::{
     model::{
         channel::Message,
         gateway::Ready,
+        prelude::*,
     },
     http::Http,
     prelude::*,
 };
 
-use commands::{test::*, help::*, owner::*, ssh::*};
+mod test;
+mod help;
+mod owner;
+mod ssh;
+mod scraping;
+mod scheduler;
+
+use test::*;
+use help::*;
+use owner::*;
+use ssh::*;
+use scheduler::*;
+
 
 use tokio::sync::Mutex;
 
-// This data is shared and edited, so Mutex?
+// どのコマンドからもアクセスできるデータ(Clientの情報などを保持)
 struct ShardManagerContainer;
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
@@ -48,8 +59,21 @@ struct General;
 struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, _ctx: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
+    async fn ready(&self, ctx: Context, ready: Ready) {
+
+        let status_channel_id: ChannelId = env::var("STATUS_CHANNEL_ID")
+            .expect("STATUS_CHANNEL_ID not set")
+            .parse()
+            .expect("STATUS_CHANNEL_ID not a valid channel id");
+        status_channel_id.send_message(&ctx.http, |m| {
+            m.embed(|e| {
+                e.title("Connected!")
+                    .description(format!("{} is connected!", ready.user.name))
+                    .color(0x00ff00)
+            })
+        }).await.unwrap();
+
+        scraping_scheduler(Arc::new(ctx)).await.unwrap();
     }
 
     async fn message(&self, ctx: Context, msg: Message) {

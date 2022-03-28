@@ -6,6 +6,7 @@ version = 3
 name = "DiscordBot_Rust"
 version = "0.1.0"
 dependencies = [
+ "clokwerk",
  "dotenv",
  "reqwest",
  "scraper",
@@ -130,6 +131,15 @@ dependencies = [
  "serde",
  "time",
  "winapi",
+]
+
+[[package]]
+name = "clokwerk"
+version = "0.4.0-rc1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8cca22ab3f48e39a5e8432ea296da1063b3d000c3d3c37da9fa586961e21bf73"
+dependencies = [
+ "chrono",
 ]
 
 [[package]]
