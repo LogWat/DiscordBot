@@ -21,7 +21,7 @@ pub async fn scraping_scheduler(ctx: Arc<Context>) -> Result<(), Box<dyn std::er
 
     // Weather scraping (every 1 day (8:00 am))
     let ctx_clone2 = ctx.clone();
-    scheduler.every(1.days()).at("22:24").run(move || {
+    scheduler.every(1.days()).at("08:00").run(move || {
         let inner_ctx = ctx_clone2.clone();
         async move {
             scraping::scraping_weather(inner_ctx).await.unwrap();

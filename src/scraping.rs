@@ -32,12 +32,13 @@ pub async fn scraping_weather(ctx: Arc<Context>) -> Result<(), Box<dyn std::erro
     let mut msg = String::new();
     {
         let doc = scraping_url(&weather_news).await?;
-        let selector = Selector::parse("table.forecast-point-3h tbody tr.weather").unwrap();
+        let selector = Selector::parse(r#"table[id="forecast-point-3h-today"] tbody tr.weather td p"#).unwrap();
         for node in doc.select(&selector) {
-            msg.push_str(&format!("{}", node.text().collect::<Vec<_>>().join("\n")));
+            let c = node.text().collect::<Vec<_>>();
+            msg.push_str(&format!("{} ", c.join(" ")));
         }
     }
-
+    msg.push_str("\n");
     channel_id.send_message(&ctx, |m| m.content(msg)).await?;
 
     Ok(())
