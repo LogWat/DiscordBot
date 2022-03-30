@@ -34,11 +34,11 @@ async fn ssh_error(ctx: &Context, msg: &Message) {
 async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     
     dotenv::dotenv().expect("Failed to load .env file");
-    let host = env::var("HOSTNAME").expect("HOSTNAME is not set");
-    let domain = env::var("DOMAINNAME").expect("DOMAINNAME is not set");
+    let host = env::var("SSH_TARGET_HOST").expect("SSH_TARGET_HOST is not set");
+    let domain = env::var("SSH_TARGET_DOMAIN").expect("SSH_TARGET_DOMAIN is not set");
 
     // get status info by scraping
-    let host_status_url = env::var("HOST_STATUS").expect("HOST_STATUS is not set");
+    let host_status_url = env::var("SSH_HOST_STATUS_URL").expect("SSH_HOST_STATUS_URL is not set");
     let mut host_statuses: Vec::<HostStatus> = Vec::new();
     match reqwest::get(&host_status_url).await {
         Ok(response) => {
@@ -151,9 +151,9 @@ async fn ssh_test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
 async fn ssh_connect(target: &String) -> String {
     dotenv::dotenv().expect("Failed to load .env file");
-    let user = env::var("USERNAME").expect("USERNAME is not set");
-    let key_pass = env::var("PASSWORD").expect("PASSWORD is not set");
-    let key_path = env::var("KEY_PATH").expect("KEY_PATH is not set");
+    let user = env::var("SSH_USERNAME").expect("SSH_USERNAME is not set");
+    let key_pass = env::var("SSH_PASSWORD").expect("SSH_PASSWORD is not set");
+    let key_path = env::var("SSH_KEY_PATH").expect("SSH_KEY_PATH is not set");
 
     let mut session = Session::new().unwrap();
     match TcpStream::connect(target) {
