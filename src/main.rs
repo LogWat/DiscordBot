@@ -53,7 +53,7 @@ impl TypeMapKey for CommandCounter {
 #[group]
 #[description("General commands")]
 #[summary("General")]
-#[commands(test, say, shutdown, commands, ssh_test)]
+#[commands(test, say, shutdown, commands, ssh_test, delete_msgs)]
 struct General;
 
 struct Handler;
