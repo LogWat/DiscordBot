@@ -12,6 +12,13 @@ use scraper::{
 use std::{env};
 use std::sync::Arc;
 
+struct Item {
+    name: String,
+    type_id: u32,
+    id: String,
+    detail_url: String,
+}
+
 // [!] TODO: Error handling
 
 // Scraping at regular intervals (every 5 minutes)
@@ -19,8 +26,42 @@ pub async fn scraping_price(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
     let target_url = env::var("PT_URL").unwrap();
     let target_sub_url = env::var("PTS_URL").unwrap();
     let target_query = env::var("PT_QUERY").unwrap();
-    let resp = reqwest::get(&target_url).await?;
-    let body = resp.text().await?;
+
+    // type_id
+    let mut msg = String::new();
+    {
+        let types = vec![481, 485, 480, 486, 479, 482, 484, 487];
+        let selector = Selector::parse(
+            r#"table.tbl-compare02 tbody tr.tr-border td.td-price ul li.pryen a"#
+        ).unwrap();
+        for type_id in types {
+            let url = format!("{}{}?{}={}", target_url, target_sub_url, target_query, type_id);
+            let doc = scraping_url(&url).await?;
+            for node in doc.select(&selector) {
+                let item_name = node.text().next().unwrap();
+                let item_href = node.value().attr("href").unwrap();
+                // extract detail_id from href (detail_id = KXXXXX)
+                let id_index = item_href.find("K").unwrap();
+                let mut id = item_href[id_index..].to_string();
+                let id_end_index = id.find("/").unwrap();
+                id = id[..id_end_index].to_string();
+                msg.push_str(&format!("{}:{}\n", item_name, id));
+            }
+        }
+    }
+
+    let channel_id: ChannelId = env::var("PRICE_CHANNEL_ID")
+        .expect("PRICE_CHANNEL_ID not set")
+        .parse()
+        .expect("PRICE_CHANNEL_ID not a valid channel id");
+
+    channel_id.send_message(&ctx.http, |m| {
+        m.embed(|e| {
+            e.title("Price Print Test")
+                .description(msg)
+                .color(0x0000ff)
+        })
+    }).await.unwrap();
 
     Ok(())
 }
@@ -32,7 +73,7 @@ pub async fn scraping_weather(ctx: Arc<Context>) -> Result<(), Box<dyn std::erro
     let mut msg = String::new();
     let hours = ["03", "06", "09", "12", "15", "18", "21", "24"];
     for hour in hours.iter() {
-        msg.push_str(&format!("{:^5}", hour));
+        msg.push_str(&format!("{:^10}", hour));
     }
     msg.push_str("\n");
     {
@@ -47,9 +88,9 @@ pub async fn scraping_weather(ctx: Arc<Context>) -> Result<(), Box<dyn std::erro
             match w {
                 "晴れ" => {
                     if i >= 6 {
-                        msg.push_str(":crescent_moon"); // 夜は月
+                        msg.push_str(":crescent_moon:"); // 夜は月
                     } else {
-                        msg.push_str(":sunny");
+                        msg.push_str(":sunny:");
                     }
                 },
                 "曇り" => msg.push_str(":cloud:"),
