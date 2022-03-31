@@ -37,14 +37,20 @@ pub async fn scraping_price(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
         for type_id in types {
             let url = format!("{}{}?{}={}", target_url, target_sub_url, target_query, type_id);
             let doc = scraping_url(&url).await?;
-            for node in doc.select(&selector) {
+            for (i, node) in doc.select(&selector).enumerate() {
+                if i > 4 {
+                    // 上位5件のみ
+                    break;
+                }
                 let item_name = node.text().next().unwrap();
                 let item_href = node.value().attr("href").unwrap();
+
                 // extract detail_id from href (detail_id = KXXXXX)
                 let id_index = item_href.find("K").unwrap();
                 let mut id = item_href[id_index..].to_string();
                 let id_end_index = id.find("/").unwrap();
                 id = id[..id_end_index].to_string();
+
                 msg.push_str(&format!("{}:{}\n", item_name, id));
             }
         }
