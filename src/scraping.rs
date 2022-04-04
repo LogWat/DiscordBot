@@ -13,10 +13,10 @@ use std::{env};
 use std::sync::Arc;
 
 struct Item {
-    name: String,
-    type_id: u32,
-    id: String,
-    detail_url: String,
+    name: String,       // Item name
+    type_id: u32,       // Item type id (for each spec)
+    id: String,         // Item id (for each item to use in the details page)
+    detail_url: String, // Item detail url
 }
 
 // [!] TODO: Error handling
@@ -26,9 +26,9 @@ pub async fn scraping_price(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
     let target_url = env::var("PT_URL").unwrap();
     let target_sub_url = env::var("PTS_URL").unwrap();
     let target_query = env::var("PT_QUERY").unwrap();
+    let tds_url = env::var("PTSH_URL").unwrap();
 
-    // type_id
-    let mut msg = String::new();
+    let mut items: Vec<Item> = Vec::new();
     {
         let types = vec![481, 485, 480, 486, 479, 482, 484, 487];
         let selector = Selector::parse(
@@ -42,7 +42,7 @@ pub async fn scraping_price(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
                     // 上位5件のみ
                     break;
                 }
-                let item_name = node.text().next().unwrap();
+                let item_value = node.text().next().unwrap();
                 let item_href = node.value().attr("href").unwrap();
 
                 // extract detail_id from href (detail_id = KXXXXX)
@@ -51,23 +51,15 @@ pub async fn scraping_price(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
                 let id_end_index = id.find("/").unwrap();
                 id = id[..id_end_index].to_string();
 
-                msg.push_str(&format!("{}:{}\n", item_name, id));
+                items.push(Item {
+                    name: item_value.to_string(),
+                    type_id: type_id,
+                    id: id.clone(),
+                    detail_url: format!("{}/item/{}{}", target_url, id, tds_url),
+                });
             }
         }
     }
-
-    let channel_id: ChannelId = env::var("PRICE_CHANNEL_ID")
-        .expect("PRICE_CHANNEL_ID not set")
-        .parse()
-        .expect("PRICE_CHANNEL_ID not a valid channel id");
-
-    channel_id.send_message(&ctx.http, |m| {
-        m.embed(|e| {
-            e.title("Price Print Test")
-                .description(msg)
-                .color(0x0000ff)
-        })
-    }).await.unwrap();
 
     Ok(())
 }
@@ -79,7 +71,7 @@ pub async fn scraping_weather(ctx: Arc<Context>) -> Result<(), Box<dyn std::erro
     let mut msg = String::new();
     let hours = ["03", "06", "09", "12", "15", "18", "21", "24"];
     for hour in hours.iter() {
-        msg.push_str(&format!("{:^10}", hour));
+        msg.push_str(&format!("{}", hour));
     }
     msg.push_str("\n");
     {
