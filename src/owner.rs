@@ -13,7 +13,9 @@ use serenity::{
 };
 use serenity::model::prelude::*;
 use serenity::prelude::*;
+use std::sync::Arc;
 
+use crate::scraping;
 use crate::ShardManagerContainer;
 
 #[command]
@@ -72,6 +74,30 @@ pub async fn delete_msgs(ctx: &Context, msg: &Message, args: Args) -> CommandRes
     }
 
     msg.channel_id.say(&ctx, format!("Deleted {} messages.", num_of_delete)).await?;
+
+    Ok(())
+}
+
+#[command]
+pub async fn dbg_w_sc(ctx: &Context, msg: &Message) -> CommandResult {
+    if admin(ctx, msg).await == false {
+        msg.reply(ctx, "Ah... You don't get to tell me what to do.").await?;
+        return Ok(());
+    }
+
+    scraping::scraping_weather(Arc::new(ctx.clone())).await.unwrap();
+
+    Ok(())
+}
+
+#[command]
+pub async fn dbg_p_sc(ctx: &Context, msg: &Message) -> CommandResult {
+    if admin(ctx, msg).await == false {
+        msg.reply(ctx, "Ah... You don't get to tell me what to do.").await?;
+        return Ok(());
+    }
+
+    scraping::scraping_price(Arc::new(ctx.clone())).await.unwrap();
 
     Ok(())
 }
