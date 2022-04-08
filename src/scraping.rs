@@ -60,7 +60,6 @@ pub async fn scraping_price(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
                     detail_url: format!("{}/item/{}{}", target_url, id, tds_url),
                 });
             }
-            break;
         }
     }
 
