@@ -14,28 +14,67 @@ use std::{env};
 use std::sync::Arc;
 
 #[derive(Clone)]
-struct Item {
-    name: String,       // Item name
-    type_id: u32,       // Item type id (for each spec)
-    id: String,         // Item id (for each item to use in the details page)
-    detail_url: String, // Item detail url
+pub struct Item {
+    pub name: String,       // Item name
+    pub type_id: u32,       // Item type id (for each spec)
+    pub id: String,         // Item id (for each item to use in the details page)
+    pub detail_url: String, // Item detail url
+}
+
+#[derive(Clone)]
+pub struct ItemHistory {
+    pub item: Item,
+    pub min_price: u32,
+    pub date_range: String,
+}
+
+pub struct ItemHistoryContainer;
+impl TypeMapKey for ItemHistoryContainer {
+    type Value = Arc<Mutex<Vec<ItemHistory>>>;
 }
 
 // [!] TODO: Error handling
 
 // Scraping at regular intervals (every 5 minutes)
 pub async fn scraping_price(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
-    let target_url = env::var("PT_URL").unwrap();
-    let target_sub_url = env::var("PTS_URL").unwrap();
-    let target_query = env::var("PT_QUERY").unwrap();
-    let tds_url = env::var("PTSH_URL").unwrap();
 
-    let mut items: Vec<Item> = Vec::new();
+    let ihc_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<ItemHistoryContainer>().unwrap().clone()
+    };
+
+    let ihc = ihc_lock.lock().await;
+    if ihc.len() == 0 {
+        price_scrape_first(ctx).await?;
+    } else {
+        price_scrape_update(ctx).await?;
+    }
+
+    Ok(())
+}
+
+
+// Price History Container に 何もない場合は各アイテムの最小値を表から作成して追加 宣言
+async fn price_scrape_first(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
+    let target_url = env::var("PT_URL").expect("PT_URL not found");
+    let target_sub_url = env::var("PTS_URL").expect("PTS_URL not found");
+    let target_query = env::var("PT_QUERY").expect("PT_QUERY not found");
+    let tds_url = env::var("PTSH_URL").expect("PTSH_URL not found");
+
+    let types = vec![481, 485, 480, 486, 479, 482, 484, 487];
+    let selector = Selector::parse(
+        r#"table.tbl-compare02 tbody tr.tr-border td[class="end checkItem"] table tbody tr td.ckitemLink a.ckitanker"# // KXXXX, Item Name
+    ).unwrap();
+    let value_selector = Selector::parse(
+        r#"table[id="priceHistoryTbl2"] tbody tr td[class="alignR itemviewColor06"] strong"#                           // Item Price
+    ).unwrap();
+    let date_selector = Selector::parse(
+        r#"table[id="priceHistoryTbl2"] tbody tr td.alignL"#                                                           // Date
+    ).unwrap();
+    let re_notnum = Regex::new(r"\D").unwrap();
+
+    let mut items = Vec::new();
     {
-        let types = vec![481, 485, 480, 486, 479, 482, 484, 487];
-        let selector = Selector::parse(
-            r#"table.tbl-compare02 tbody tr.tr-border td[class="end checkItem"] table tbody tr td.ckitemLink a.ckitanker"#
-        ).unwrap();
         for type_id in types {
             let url = format!("{}{}?{}={}", target_url, target_sub_url, target_query, type_id);
             let doc = scraping_url(&url, "shift_jis").await?;
@@ -53,50 +92,78 @@ pub async fn scraping_price(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
                 let id_end_index = id.find("/").unwrap();
                 id = id[..id_end_index].to_string();
 
-                items.push(Item {
+                let item = Item {
                     name: name,
                     type_id: type_id,
                     id: id.clone(),
                     detail_url: format!("{}/item/{}{}", target_url, id, tds_url),
-                });
+                };
+
+                items.push(item);
             }
         }
     }
 
-    let channel_id: ChannelId = env::var("PRICE_CHANNEL_ID").unwrap().parse().unwrap();
     let mut msg = String::new();
-    let item_test = items[0].clone();
-    let mut values = vec![];
-    let mut date = vec![];
-    {
-        let value_selector = Selector::parse(
-            r#"table[id="priceHistoryTbl2"] tbody tr td[class="alignR itemviewColor06"] strong"#
-        ).unwrap();
-        let date_selector = Selector::parse(
-            r#"table[id="priceHistoryTbl2"] tbody tr td.alignL"#
-        ).unwrap();
-        let doc = scraping_url(&item_test.detail_url, "shift_jis").await?;
-        let re_not_num = Regex::new(r"\D").unwrap();
-        for node in doc.select(&value_selector) {
-            let raw_value = node.text().next().unwrap();
-            let num_value: u32 = match re_not_num.replace_all(&raw_value, "").parse() {
-                Ok(num) => num,
-                Err(_) => continue,
-            };
-            values.push(num_value);
-        }
-        for node in doc.select(&date_selector) {
-            for n in node.text() {
-                if n.to_string().contains("日") {
-                    date.push(n.to_string());
+    let ihc_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<ItemHistoryContainer>().unwrap().clone()
+    };
+    for item in items {
+        let mut values = vec![];
+        let mut dates = vec![];
+
+        {
+            let doc = scraping_url(&item.detail_url, "shift_jis").await?;
+            for cnode in doc.select(&value_selector) {
+                let price_raw = cnode.text().next().unwrap();
+                let price = re_notnum.replace_all(price_raw, "").parse::<u32>().unwrap();
+                values.push(price);
+            }
+            for node in doc.select(&date_selector) {
+                for n in node.text() {
+                    if n.to_string().contains("日") {
+                        dates.push(n.to_string());
+                    }
                 }
             }
         }
+            
+        let mut ihc = ihc_lock.lock().await;
+        ihc.push(
+            ItemHistory {
+                item: item.clone(),
+                min_price: values.iter().min().unwrap().clone(),
+                date_range: format!("{} ~ {}", dates[dates.len() - 1], dates[0]),
+            }
+        );
+
+        msg.push_str(&format!("Item Name: {}\n", item.name));
+        msg.push_str(&format!("Date Range: {} ~ {}\n", dates[dates.len() - 1], dates[0]));
+        msg.push_str(&format!("Min Price: {} yen\n", values.iter().min().unwrap()));
+        msg.push_str("\n");
     }
 
-    msg.push_str(&format!("Item Name: {}\n", item_test.name));
-    msg.push_str(&format!("Date Range: {} ~ {}\n", date[date.len() - 1], date[0]));
-    msg.push_str(&format!("Min Price: {} yen\n", values.iter().min().unwrap()));
+    let channel_id: ChannelId = env::var("PRICE_CHANNEL_ID").unwrap().parse().unwrap();
+
+    channel_id.send_message(&ctx.http, |m| m
+        .embed(|e| e
+            .title("Price History")
+            .description(msg)
+            .color(0x00FF00)
+        )
+    ).await?;
+    Ok(())
+}
+
+// Price History Container に アイテムが存在する場合は各アイテムの最小値を比較して更新点があれば通知
+async fn price_scrape_update(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
+
+    let mut msg = String::new();
+
+    msg.push_str("GnTest");
+
+    let channel_id: ChannelId = env::var("PRICE_CHANNEL_ID").unwrap().parse().unwrap();
 
     channel_id.send_message(&ctx.http, |m| m
         .embed(|e| e
