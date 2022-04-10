@@ -34,6 +34,7 @@ use help::*;
 use owner::*;
 use ssh::*;
 use scheduler::*;
+use scraping::*;
 
 
 use tokio::sync::Mutex;
@@ -152,6 +153,7 @@ async fn main() {
     {
         let mut data = client.data.write().await;
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
+        data.insert::<ItemHistoryContainer>(Arc::new(Mutex::new(Vec::new())));
     }
 
     let shard_manager = client.shard_manager.clone();
