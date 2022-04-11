@@ -11,7 +11,7 @@ use scraper::{
 };
 use regex::Regex;
 use std::{env};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 #[derive(Clone)]
 pub struct Item {
@@ -30,7 +30,7 @@ pub struct ItemHistory {
 
 pub struct ItemHistoryContainer;
 impl TypeMapKey for ItemHistoryContainer {
-    type Value = Arc<Mutex<Vec<ItemHistory>>>;
+    type Value = Arc<RwLock<Vec<ItemHistory>>>;
 }
 
 // [!] TODO: Error handling
@@ -40,11 +40,16 @@ pub async fn scraping_price(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
 
     let ihc_lock = {
         let data_read = ctx.data.read().await;
-        data_read.get::<ItemHistoryContainer>().unwrap().clone()
+        data_read.get::<ItemHistoryContainer>().expect("Failed to get ItemHistoryContainer").clone()
     };
 
-    let ihc = ihc_lock.lock().await;
-    if ihc.len() == 0 {
+    let mut ihc_len = 0;
+    {
+        let ihc_lock = ihc_lock.read().expect("Failed to get ItemHistoryContainer");
+        ihc_len = ihc_lock.len();
+    }
+
+    if ihc_len == 0 {
         price_scrape_first(ctx).await?;
     } else {
         price_scrape_update(ctx).await?;
@@ -105,10 +110,6 @@ async fn price_scrape_first(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
     }
 
     let mut msg = String::new();
-    let ihc_lock = {
-        let data_read = ctx.data.read().await;
-        data_read.get::<ItemHistoryContainer>().unwrap().clone()
-    };
     for item in items {
         let mut values = vec![];
         let mut dates = vec![];
@@ -117,7 +118,10 @@ async fn price_scrape_first(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
             let doc = scraping_url(&item.detail_url, "shift_jis").await?;
             for cnode in doc.select(&value_selector) {
                 let price_raw = cnode.text().next().unwrap();
-                let price = re_notnum.replace_all(price_raw, "").parse::<u32>().unwrap();
+                let price = match re_notnum.replace_all(price_raw, "").parse::<u32>() {
+                    Ok(p) => p,
+                    Err(_) => continue,
+                };
                 values.push(price);
             }
             for node in doc.select(&date_selector) {
@@ -129,14 +133,21 @@ async fn price_scrape_first(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
             }
         }
             
-        let mut ihc = ihc_lock.lock().await;
-        ihc.push(
-            ItemHistory {
-                item: item.clone(),
-                min_price: values.iter().min().unwrap().clone(),
-                date_range: format!("{} ~ {}", dates[dates.len() - 1], dates[0]),
-            }
-        );
+        let ihc_lock = {
+            let data_read = ctx.data.read().await;
+            data_read.get::<ItemHistoryContainer>().expect("Failed to get ItemHistoryContainer").clone()
+        };
+
+        {
+            let mut ihc = ihc_lock.write().expect("Failed to get ItemHistoryContainer");
+            ihc.push(
+                ItemHistory {
+                    item: item.clone(),
+                    min_price: values.iter().min().unwrap().clone(),
+                    date_range: format!("{} ~ {}", dates[dates.len() - 1], dates[0]),
+                }
+            );
+        }
 
         msg.push_str(&format!("Item Name: {}\n", item.name));
         msg.push_str(&format!("Date Range: {} ~ {}\n", dates[dates.len() - 1], dates[0]));
@@ -146,13 +157,7 @@ async fn price_scrape_first(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
 
     let channel_id: ChannelId = env::var("PRICE_CHANNEL_ID").unwrap().parse().unwrap();
 
-    channel_id.send_message(&ctx.http, |m| m
-        .embed(|e| e
-            .title("Price History")
-            .description(msg)
-            .color(0x00FF00)
-        )
-    ).await?;
+    channel_id.say(&ctx.http, msg).await?;
     Ok(())
 }
 
@@ -225,6 +230,7 @@ pub async fn scraping_weather(ctx: Arc<Context>) -> Result<(), Box<dyn std::erro
 
 // scraping and return doc of url
 async fn scraping_url(url: &str, charset: &str) -> Result<Html, Box<dyn std::error::Error>> {
+    println!("Scraping {}", url);
     let resp = reqwest::get(url).await?;
     let body = resp.text_with_charset(charset).await?; // Content-Type の charsetが utf-8 以外でも取得できる
     let doc = Html::parse_document(&body);

@@ -1,6 +1,6 @@
 use std::{
     env,
-    sync::Arc, 
+    sync::{Arc, RwLock}, 
     collections::{HashSet, HashMap},
 };
 
@@ -153,7 +153,7 @@ async fn main() {
     {
         let mut data = client.data.write().await;
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
-        data.insert::<ItemHistoryContainer>(Arc::new(Mutex::new(Vec::new())));
+        data.insert::<ItemHistoryContainer>(Arc::new(RwLock::new(Vec::new())));
     }
 
     let shard_manager = client.shard_manager.clone();
