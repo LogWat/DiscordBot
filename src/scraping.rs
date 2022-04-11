@@ -164,19 +164,56 @@ async fn price_scrape_first(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
 // Price History Container に アイテムが存在する場合は各アイテムの最小値を比較して更新点があれば通知
 async fn price_scrape_update(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
 
-    let mut msg = String::new();
+    let ihc_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<ItemHistoryContainer>().expect("Failed to get ItemHistoryContainer").clone()
+    };
 
-    msg.push_str("GnTest");
+    let mut ihc_copy = Vec::new();
+    {
+        let ihc = ihc_lock.read().expect("Failed to read ItemHistoryContainer");
+        ihc_copy.extend(ihc.clone());
+    }
 
-    let channel_id: ChannelId = env::var("PRICE_CHANNEL_ID").unwrap().parse().unwrap();
+    let price_selctor = Selector::parse(
+        r#"div#all div#main div.contents930 div.outerRecommend div#itmBoxMax div.itmBoxBottom div.itmBoxln div#productAll
+        div#ProductInfoBox div.priceBoxWrap div.priceWrap div.subInfoObj1 p span.priceTxt"#
+    ).unwrap();
+    let re_notnum = Regex::new(r"\D").unwrap();
+    let channel_id: ChannelId = env::var("PRICE_CHANNEL_ID").expect("PRICE_CHANNEL_ID not found").parse().unwrap();
 
-    channel_id.send_message(&ctx.http, |m| m
-        .embed(|e| e
-            .title("Price History")
-            .description(msg)
-            .color(0x00FF00)
-        )
-    ).await?;
+    let mut test_flag = false;
+    for item in ihc_copy {
+        let mut url = item.item.detail_url.clone();
+        let tds_url = env::var("PTSH_URL").expect("PTSH_URL not found");
+        // retrive tds_url from detail_url
+
+
+        let mut price = 0;
+        {
+            let doc = scraping_url(&url, "shift_jis").await?;
+            let price_raw = match doc.select(&price_selctor).next() {
+                Some(node) => node.text().next().unwrap(),
+                None => continue,
+            };
+            price = match re_notnum.replace_all(price_raw, "").parse::<u32>() {
+                Ok(p) => p,
+                Err(_) => continue,
+            };
+        }
+        if price < item.min_price {
+            let msg = format!("{} の最小価格が {} yen から {} yen に更新されました！\n", item.item.name, item.min_price, price);
+            channel_id.say(&ctx.http, msg).await?;
+            test_flag = true;
+        }
+    }
+
+    if !test_flag {
+        let msg = "更新点がありませんでした。".to_string();
+        channel_id.say(&ctx.http, msg).await?;
+    }
+
+
     Ok(())
 }
 
