@@ -101,7 +101,7 @@ async fn price_scrape_first(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
                     name: name,
                     type_id: type_id,
                     id: id.clone(),
-                    detail_url: format!("{}/item/{}{}", target_url, id, tds_url),
+                    detail_url: format!("{}/item/{}", target_url, id),
                 };
 
                 items.push(item);
@@ -109,13 +109,13 @@ async fn price_scrape_first(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
         }
     }
 
-    let mut msg = String::new();
     for item in items {
         let mut values = vec![];
         let mut dates = vec![];
-
         {
-            let doc = scraping_url(&item.detail_url, "shift_jis").await?;
+            let mut url = item.detail_url.clone();
+            url.push_str(&tds_url);
+            let doc = scraping_url(&url, "shift_jis").await?;
             for cnode in doc.select(&value_selector) {
                 let price_raw = cnode.text().next().unwrap();
                 let price = match re_notnum.replace_all(price_raw, "").parse::<u32>() {
@@ -149,15 +149,14 @@ async fn price_scrape_first(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
             );
         }
 
+        let mut msg = String::new();
         msg.push_str(&format!("Item Name: {}\n", item.name));
         msg.push_str(&format!("Date Range: {} ~ {}\n", dates[dates.len() - 1], dates[0]));
         msg.push_str(&format!("Min Price: {} yen\n", values.iter().min().unwrap()));
         msg.push_str("\n");
+        println!("{}", msg);
     }
 
-    let channel_id: ChannelId = env::var("PRICE_CHANNEL_ID").unwrap().parse().unwrap();
-
-    channel_id.say(&ctx.http, msg).await?;
     Ok(())
 }
 
@@ -182,13 +181,8 @@ async fn price_scrape_update(ctx: Arc<Context>) -> Result<(), Box<dyn std::error
     let re_notnum = Regex::new(r"\D").unwrap();
     let channel_id: ChannelId = env::var("PRICE_CHANNEL_ID").expect("PRICE_CHANNEL_ID not found").parse().unwrap();
 
-    let mut test_flag = false;
     for item in ihc_copy {
-        let mut url = item.item.detail_url.clone();
-        let tds_url = env::var("PTSH_URL").expect("PTSH_URL not found");
-        // retrive tds_url from detail_url
-
-
+        let url = item.item.detail_url.clone();
         let mut price = 0;
         {
             let doc = scraping_url(&url, "shift_jis").await?;
@@ -204,15 +198,8 @@ async fn price_scrape_update(ctx: Arc<Context>) -> Result<(), Box<dyn std::error
         if price < item.min_price {
             let msg = format!("{} の最小価格が {} yen から {} yen に更新されました！\n", item.item.name, item.min_price, price);
             channel_id.say(&ctx.http, msg).await?;
-            test_flag = true;
         }
     }
-
-    if !test_flag {
-        let msg = "更新点がありませんでした。".to_string();
-        channel_id.say(&ctx.http, msg).await?;
-    }
-
 
     Ok(())
 }
@@ -223,35 +210,81 @@ pub async fn scraping_weather(ctx: Arc<Context>) -> Result<(), Box<dyn std::erro
     let weather_news = env::var("WT_URL").unwrap();
     let mut msg = String::new();
     let hours = ["03", "06", "09", "12", "15", "18", "21", "24"];
+    /*
     for hour in hours.iter() {
-        msg.push_str(&format!("{}", hour));
+        msg.push_str(&format!("　{}　", hour));
     }
+    */
     msg.push_str("\n");
     {
         let doc = scraping_url(&weather_news, "utf-8").await?;
+        let rainy_p_selector = Selector::parse(r#"table[id="forecast-point-3h-today"] tbody tr.prob-precip td span"#).unwrap();
+        let mut rainy_p = vec![];
+        for node in doc.select(&rainy_p_selector) {
+            rainy_p.push(node.text().next().unwrap().to_string());
+        }
         let selector = Selector::parse(r#"table[id="forecast-point-3h-today"] tbody tr.weather td p"#).unwrap();
         for (i, node) in doc.select(&selector).enumerate() {
             let c = node.text().collect::<Vec<_>>();
             if c.len() < 1 {
                 continue;
             }
+            if i > rainy_p.len() {
+                msg.push_str("Error: rainy_p is shorter than weather elements.\n");
+                break;
+            }
             let w = c[0];
+            let mut rainy_p_warning = String::new();
+            let rainy_p_num = match rainy_p[i].parse::<u32>() {
+                Ok(p) => p,
+                Err(_) => {
+                    msg.push_str(&format!("Error: {} is not a number.\n", rainy_p[i]));
+                    continue;
+                }
+            };
+            if rainy_p_num >= 50 {
+                rainy_p_warning.push_str("<-- 降水確率50%以上");
+            }
             match w {
                 "晴れ" => {
                     if i >= 6 {
-                        msg.push_str(":crescent_moon:"); // 夜は月
+                        msg.push_str(&format!("{}: {} {}\n", hours[i], ":crescent_moon:", rainy_p_warning)); // 夜は月
                     } else {
-                        msg.push_str(":sunny:");
+                        msg.push_str(&format!("{}: {} {}\n", hours[i], ":sunny:", rainy_p_warning));
                     }
                 },
-                "曇り" => msg.push_str(":cloud:"),
-                "雨" => msg.push_str(":umbrella:"),
-                "小雨" => msg.push_str(":closed_umbrella:"),
-                "弱雨" => msg.push_str(":umbrella2:"),
-                "雪" => msg.push_str(":snowflake:"),
-                _ => msg.push_str(":question:"),        // TODO: 大雨とかの追加
+                "曇り" => msg.push_str(&format!("{}: {} {}\n", hours[i], ":cloud:", rainy_p_warning)),
+                "雨" => msg.push_str(&format!("{}: {} {}\n", hours[i], ":umbrella:", rainy_p_warning)),
+                "小雨" => msg.push_str(&format!("{}: {} {}\n", hours[i], ":closed_umbrella:", rainy_p_warning)),
+                "弱雨" => msg.push_str(&format!("{}: {} {}\n", hours[i], ":umbrella2:", rainy_p_warning)),
+                "雪" => msg.push_str(&format!("{}: {} {}\n", hours[i], ":snowflake:", rainy_p_warning)),
+                _ => msg.push_str(&format!("{}: {} {}\n", hours[i], ":question:", rainy_p_warning)),        // TODO: 大雨とかの追加
             }
-            msg.push_str(" ");
+        }
+        msg.push_str("\n");
+        let max_temp_selctor = Selector::parse(
+            r#"header[class="header clearfix"] div#hd ul#history-entries li#history-entry-0 a[class="history-entries-link clearfix"] div.info-box span.temp-box smap.max_t"#
+        ).unwrap();
+        let min_temp_selctor = Selector::parse(
+            r#"header[class="header clearfix"] div#hd ul#history-entries li#history-entry-0 a[class="history-entries-link clearfix"] div.info-box span.temp-box smap.min_t"#
+        ).unwrap();
+        for node in doc.select(&max_temp_selctor) {
+            let c = node.text().collect::<Vec<_>>();
+            if c.len() < 1 {
+                continue;
+            }
+            let max_temp = c[0];
+            msg.push_str(&format!("最高気温: {}, ", max_temp));
+            break;
+        }
+        for node in doc.select(&min_temp_selctor) {
+            let c = node.text().collect::<Vec<_>>();
+            if c.len() < 1 {
+                continue;
+            }
+            let min_temp = c[0];
+            msg.push_str(&format!("最低気温: {}\n", min_temp));
+            break;
         }
     }
     channel_id.send_message(&ctx.http, |m| {

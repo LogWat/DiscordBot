@@ -10,9 +10,9 @@ use crate::scraping;
 pub async fn scraping_scheduler(ctx: Arc<Context>) -> Result<(), Box<dyn std::error::Error>> {
     let mut scheduler = AsyncScheduler::new();
 
-    // Every 5 minutes (prices)
+    // prices scraping (every 1 hour)
     let ctx_clone1 = ctx.clone();
-    scheduler.every(5.minutes()).run(move || {
+    scheduler.every(1.hour()).run(move || {
         let inner_ctx = ctx_clone1.clone();
         async move {
             scraping::scraping_price(inner_ctx).await.unwrap();
