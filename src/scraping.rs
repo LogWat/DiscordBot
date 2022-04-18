@@ -218,12 +218,12 @@ pub async fn scraping_weather(ctx: Arc<Context>) -> Result<(), Box<dyn std::erro
     msg.push_str("\n");
     {
         let doc = scraping_url(&weather_news, "utf-8").await?;
-        let rainy_p_selector = Selector::parse(r#"table[id="forecast-point-3h-today"] tbody tr.prob-precip td span"#).unwrap();
+        let rainy_p_selector = Selector::parse(r#"#forecast-point-3h-today > tbody > tr.prob-precip > td > span"#).unwrap();
         let mut rainy_p = vec![];
         for node in doc.select(&rainy_p_selector) {
             rainy_p.push(node.text().next().unwrap().to_string());
         }
-        let selector = Selector::parse(r#"table[id="forecast-point-3h-today"] tbody tr.weather td p"#).unwrap();
+        let selector = Selector::parse(r#"#forecast-point-3h-today > tbody > tr.weather > td > p"#).unwrap();
         for (i, node) in doc.select(&selector).enumerate() {
             let c = node.text().collect::<Vec<_>>();
             if c.len() < 1 {
@@ -263,10 +263,10 @@ pub async fn scraping_weather(ctx: Arc<Context>) -> Result<(), Box<dyn std::erro
         }
         msg.push_str("\n");
         let max_temp_selctor = Selector::parse(
-            r#"header[class="header clearfix"] div#hd ul#history-entries li#history-entry-0 a[class="history-entries-link clearfix"] div.info-box span.temp-box smap.max_t"#
+            r#"#history-entry-0 > a.history-entries-link.clearfix > div.info-box > span.temp-box > span.max_t"#
         ).unwrap();
         let min_temp_selctor = Selector::parse(
-            r#"header[class="header clearfix"] div#hd ul#history-entries li#history-entry-0 a[class="history-entries-link clearfix"] div.info-box span.temp-box smap.min_t"#
+            r#"#history-entry-0 > a.history-entries-link.clearfix > div.info-box > span.temp-box > span.min_t"#
         ).unwrap();
         for node in doc.select(&max_temp_selctor) {
             let c = node.text().collect::<Vec<_>>();
