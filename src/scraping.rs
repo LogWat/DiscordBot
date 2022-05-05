@@ -148,14 +148,19 @@ async fn price_scrape_first(ctx: Arc<Context>) -> Result<(), Box<dyn std::error:
                 }
             );
         }
-
-        let mut msg = String::new();
-        msg.push_str(&format!("Item Name: {}\n", item.name));
-        msg.push_str(&format!("Date Range: {} ~ {}\n", dates[dates.len() - 1], dates[0]));
-        msg.push_str(&format!("Min Price: {} yen\n", values.iter().min().unwrap()));
-        msg.push_str("\n");
-        println!("{}", msg);
     }
+
+    let ihc_lock = {
+        let data_read = ctx.data.read().await;
+        data_read.get::<ItemHistoryContainer>().expect("Failed to get ItemHistoryContainer").clone()
+    };
+    let mut msg = String::new();
+    {
+        let ihc = ihc_lock.read().expect("Failed to get ItemHistoryContainer");
+        msg.push_str(&format!("{} items added to ItemHistoryContainer", ihc.len()));
+    }
+    let channel_id: ChannelId = env::var("PRICE_CHANNEL_ID").expect("PRICE_CHANNEL_ID not found").parse().unwrap();
+    channel_id.send_message(&ctx.http, |m| m.content(msg)).await?;
 
     Ok(())
 }
